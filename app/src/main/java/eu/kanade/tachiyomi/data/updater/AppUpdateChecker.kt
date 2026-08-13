@@ -97,10 +97,19 @@ val GITHUB_REPO: String by lazy { getGithubRepo() }
 
 fun getGithubRepo(peekIntoPreview: Boolean = false): String =
     if (isPreviewBuildType || peekIntoPreview) {
-        "komikku-app/komikku-preview"
+        // KMK -->
+        // Preview builds of this fork carry the EPUB text reader, which upstream does not ship, so
+        // in-app update checks must point at the fork's own releases instead of upstream previews.
+        FORK_GITHUB_REPO
+        // KMK <--
     } else {
         "komikku-app/komikku"
     }
+
+// KMK -->
+/** Repository that publishes this fork's preview releases. */
+const val FORK_GITHUB_REPO = "welldoingk/komikku"
+// KMK <--
 
 val RELEASE_TAG: String by lazy { getReleaseTag() }
 
