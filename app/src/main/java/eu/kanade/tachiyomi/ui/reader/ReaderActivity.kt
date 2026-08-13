@@ -75,6 +75,7 @@ import eu.kanade.presentation.reader.ReaderPageIndicator
 import eu.kanade.presentation.reader.ReadingModeSelectDialog
 import eu.kanade.presentation.reader.appbars.NavBarType
 import eu.kanade.presentation.reader.appbars.ReaderAppBars
+import eu.kanade.presentation.reader.appbars.ReaderTocAction
 import eu.kanade.presentation.reader.settings.ReaderSettingsDialog
 import eu.kanade.presentation.theme.TachiyomiTheme
 import eu.kanade.tachiyomi.R
@@ -84,7 +85,11 @@ import eu.kanade.tachiyomi.data.connections.discord.ReaderData
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.databinding.ReaderActivityBinding
+import eu.kanade.tachiyomi.source.TextBookSource
+import eu.kanade.tachiyomi.source.model.BookLocator
+import eu.kanade.tachiyomi.source.model.BookSectionContent
 import eu.kanade.tachiyomi.source.model.Page
+import eu.kanade.tachiyomi.source.model.TextBookPublication
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.main.MainActivity
@@ -99,6 +104,7 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderOrientation
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderSettingsScreenModel
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
+import eu.kanade.tachiyomi.ui.reader.viewer.EpubTextViewer
 import eu.kanade.tachiyomi.ui.reader.viewer.ReaderProgressIndicator
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerConfig
 import eu.kanade.tachiyomi.ui.reader.viewer.pager.PagerViewer
@@ -197,6 +203,14 @@ class ReaderActivity : BaseActivity() {
     private val windowInsetsController by lazy { WindowInsetsControllerCompat(window, window.decorView) }
 
     private var loadingIndicator: ReaderProgressIndicator? = null
+
+    private val epubLocatorPersistence by lazy {
+        EpubLocatorPersistence(
+            SharedPreferencesEpubLocatorStorage(
+                getSharedPreferences("reader_epub_locators", MODE_PRIVATE),
+            ),
+        )
+    }
 
     var isScrollingThroughPages = false
         private set
@@ -646,7 +660,12 @@ class ReaderActivity : BaseActivity() {
             return
         }
 
-        val isHttpSource = viewModel.getSource() is HttpSource
+        val source = viewModel.getReaderSource()
+        val isHttpSource = source is HttpSource && source !is TextBookSource
+        val epubViewer = state.viewer as? EpubTextViewer
+        val tableOfContents = epubViewer?.tableOfContents?.map { entry ->
+            ReaderTocAction(entry.title) { epubViewer.selectTocSection(entry.sectionId) }
+        }.orEmpty()
 
         val cropBorderPaged by readerPreferences.cropBorders().collectAsState()
         val cropBorderWebtoon by readerPreferences.cropBordersWebtoon().collectAsState()
@@ -692,6 +711,7 @@ class ReaderActivity : BaseActivity() {
             onClickTopAppBar = ::openMangaScreen,
             bookmarked = state.bookmarked,
             onToggleBookmarked = viewModel::toggleChapterBookmark,
+            tableOfContents = tableOfContents,
             onOpenInWebView = ::openChapterInWebView.takeIf { isHttpSource },
             onOpenInBrowser = ::openChapterInBrowser.takeIf { isHttpSource },
             onShare = ::shareChapter.takeIf { isHttpSource },
@@ -940,13 +960,17 @@ class ReaderActivity : BaseActivity() {
      */
     private fun updateViewer() {
         val prevViewer = viewModel.state.value.viewer
-        val newViewer = ReadingMode.toViewer(
-            viewModel.getMangaReadingMode(),
-            this,
-            // KMK -->
-            seedColor = seedColorStatic()?.toArgb(),
-            // KMK <--
-        )
+        val newViewer = if (viewModel.getReaderSource() is TextBookSource) {
+            EpubTextViewer(this)
+        } else {
+            ReadingMode.toViewer(
+                viewModel.getMangaReadingMode(),
+                this,
+                // KMK -->
+                seedColor = seedColorStatic()?.toArgb(),
+                // KMK <--
+            )
+        }
 
         if (window.sharedElementEnterTransition is MaterialContainerTransform) {
             // Wait until transition is complete to avoid crash on API 26
@@ -1165,6 +1189,38 @@ class ReaderActivity : BaseActivity() {
         }
         // SY <--
         viewModel.onPageSelected(page, /* SY --> */ currentPageText, hasExtraPage /* SY <-- */)
+    }
+
+    internal fun restoreEpubLocator(
+        chapter: ReaderChapter,
+        publication: TextBookPublication,
+        sections: List<BookSectionContent>,
+    ): EpubRestoredLocation? {
+        val chapterId = chapter.chapter.id ?: return null
+        return epubLocatorPersistence.restore(
+            chapterId = chapterId,
+            publication = publication,
+            sections = sections,
+            fallbackSectionIndex = chapter.requestedPage,
+        )
+    }
+
+    internal fun persistEpubLocator(
+        chapter: ReaderChapter,
+        publication: TextBookPublication,
+        locator: BookLocator,
+        sectionIndex: Int,
+        sectionCount: Int,
+    ) {
+        val chapterId = chapter.chapter.id ?: return
+        epubLocatorPersistence.persist(
+            chapterId = chapterId,
+            publication = publication,
+            locator = locator,
+            sectionIndex = sectionIndex,
+            sectionCount = sectionCount,
+            incognito = viewModel.isIncognitoMode(),
+        )
     }
 
     /**

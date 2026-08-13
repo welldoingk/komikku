@@ -19,6 +19,7 @@ fun ReaderTopBar(
     navigateUp: () -> Unit,
     bookmarked: Boolean,
     onToggleBookmarked: () -> Unit,
+    tableOfContents: List<ReaderTocAction>,
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
@@ -51,6 +52,14 @@ fun ReaderTopBar(
                                 onClick = onToggleBookmarked,
                             ),
                         )
+                        tableOfContents.forEach { entry ->
+                            add(
+                                AppBar.OverflowAction(
+                                    title = entry.title,
+                                    onClick = entry.onClick,
+                                ),
+                            )
+                        }
                         onOpenInWebView?.let {
                             add(
                                 AppBar.OverflowAction(
@@ -81,3 +90,8 @@ fun ReaderTopBar(
         },
     )
 }
+
+data class ReaderTocAction(
+    val title: String,
+    val onClick: () -> Unit,
+)

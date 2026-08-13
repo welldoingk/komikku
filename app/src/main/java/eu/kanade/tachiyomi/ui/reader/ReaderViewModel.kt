@@ -27,6 +27,7 @@ import eu.kanade.tachiyomi.data.saver.Image
 import eu.kanade.tachiyomi.data.saver.ImageSaver
 import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.data.sync.SyncDataJob
+import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.MetadataSource
@@ -395,6 +396,8 @@ class ReaderViewModel @JvmOverloads constructor(
             }
         }
     }
+
+    internal fun isIncognitoMode(): Boolean = incognitoMode
 
     /**
      * Called when the user pressed the back button and is going to leave the reader. Used to
@@ -939,7 +942,9 @@ class ReaderViewModel @JvmOverloads constructor(
         return state.value.currentChapter
     }
 
-    fun getSource() = manga?.source?.let { sourceManager.getOrStub(it) } as? HttpSource
+    fun getReaderSource(): Source? = manga?.source?.let { sourceManager.getOrStub(it) }
+
+    fun getSource() = getReaderSource() as? HttpSource
 
     fun getChapterUrl(): String? {
         val sChapter = getCurrentChapter()?.chapter ?: return null

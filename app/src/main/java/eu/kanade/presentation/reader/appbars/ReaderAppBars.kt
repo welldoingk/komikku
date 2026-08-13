@@ -56,6 +56,7 @@ fun ReaderAppBars(
     onClickTopAppBar: () -> Unit,
     bookmarked: Boolean,
     onToggleBookmarked: () -> Unit,
+    tableOfContents: List<ReaderTocAction>,
     onOpenInWebView: (() -> Unit)?,
     onOpenInBrowser: (() -> Unit)?,
     onShare: (() -> Unit)?,
@@ -125,6 +126,7 @@ fun ReaderAppBars(
                     navigateUp = navigateUp,
                     bookmarked = bookmarked,
                     onToggleBookmarked = onToggleBookmarked,
+                    tableOfContents = tableOfContents,
                     // SY -->
                     onOpenInWebView = null, // onOpenInWebView,
                     onOpenInBrowser = null, // onOpenInBrowser,

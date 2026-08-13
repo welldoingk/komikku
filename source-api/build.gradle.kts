@@ -37,6 +37,14 @@ kotlin {
                 implementation(project.dependencies.platform(kotlinx.coroutines.bom))
             }
         }
+
+        val androidUnitTest by getting {
+            kotlin.srcDir("src/androidHostTest/kotlin")
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(kotlinx.coroutines.test)
+            }
+        }
     }
 
     @OptIn(ExperimentalKotlinGradlePluginApi::class)

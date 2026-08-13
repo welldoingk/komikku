@@ -238,6 +238,7 @@ dependencies {
     implementation(androidx.splashscreen)
     implementation(androidx.recyclerview)
     implementation(androidx.viewpager)
+    implementation(androidx.webkit)
     implementation(androidx.profileinstaller)
 
     implementation(androidx.bundles.lifecycle)

@@ -4,9 +4,11 @@ import android.content.Context
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.data.download.DownloadProvider
 import eu.kanade.tachiyomi.source.Source
+import eu.kanade.tachiyomi.source.TextBookSource
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.online.all.MergedSource
 import eu.kanade.tachiyomi.ui.reader.model.ReaderChapter
+import eu.kanade.tachiyomi.ui.reader.model.ReaderPage
 import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import mihon.core.archive.archiveReader
 import mihon.core.archive.epubReader
@@ -31,10 +33,10 @@ class ChapterLoader(
     private val manga: Manga,
     private val source: Source,
     // SY -->
-    private val sourceManager: SourceManager,
-    private val readerPrefs: ReaderPreferences,
-    private val mergedReferences: List<MergedMangaReference>,
-    private val mergedManga: Map<Long, Manga>?,
+    private val sourceManager: SourceManager? = null,
+    private val readerPrefs: ReaderPreferences? = null,
+    private val mergedReferences: List<MergedMangaReference> = emptyList(),
+    private val mergedManga: Map<Long, Manga>? = null,
     // SY <--
 ) {
 
@@ -50,7 +52,26 @@ class ChapterLoader(
         chapter.state = ReaderChapter.State.Loading
         withIOContext {
             logcat { "Loading pages for ${chapter.chapter.name}" }
+            var selectedBookLoader: BookLoader? = null
             try {
+                if (source is TextBookSource) {
+                    val loader = BookLoader(source, manga, chapter.chapter)
+                    selectedBookLoader = loader
+                    chapter.bookLoader = loader
+                    val sections = loader.load()
+                    if (!chapter.chapter.read ||
+                        readerPrefs?.preserveReadingPosition()?.get() == true ||
+                        page != null
+                    ) {
+                        chapter.requestedPage = page ?: chapter.chapter.last_page_read
+                    }
+                    val pages = sections.mapIndexed { index, section ->
+                        ReaderPage(index, url = section.href).also { it.chapter = chapter }
+                    }
+                    chapter.state = ReaderChapter.State.Loaded(pages)
+                    return@withIOContext
+                }
+
                 val loader = getPageLoader(chapter)
                 chapter.pageLoader = loader
 
@@ -64,9 +85,7 @@ class ChapterLoader(
                 // If the chapter is partially read, set the starting page to the last the user read
                 // otherwise use the requested page.
                 if (!chapter.chapter.read /* --> EH */ ||
-                    readerPrefs
-                        .preserveReadingPosition()
-                        .get() ||
+                    readerPrefs?.preserveReadingPosition()?.get() == true ||
                     page != null // <-- EH
                 ) {
                     chapter.requestedPage = /* SY --> */ page ?: /* SY <-- */ chapter.chapter.last_page_read
@@ -74,7 +93,9 @@ class ChapterLoader(
 
                 chapter.state = ReaderChapter.State.Loaded(pages)
             } catch (e: Throwable) {
-                chapter.state = ReaderChapter.State.Error(e)
+                if (selectedBookLoader == null || chapter.bookLoader === selectedBookLoader) {
+                    chapter.state = ReaderChapter.State.Error(e)
+                }
                 throw e
             }
         }
@@ -84,7 +105,8 @@ class ChapterLoader(
      * Checks [chapter] to be loaded based on present pages and loader in addition to state.
      */
     private fun chapterIsReady(chapter: ReaderChapter): Boolean {
-        return chapter.state is ReaderChapter.State.Loaded && chapter.pageLoader != null
+        return chapter.state is ReaderChapter.State.Loaded &&
+            (chapter.pageLoader != null || chapter.bookLoader != null)
     }
 
     /**
@@ -108,7 +130,7 @@ class ChapterLoader(
                 val mangaReference = mergedReferences.firstOrNull {
                     it.mangaId == chapter.chapter.manga_id
                 } ?: error("Merge reference null")
-                val source = sourceManager.get(mangaReference.mangaSourceId)
+                val source = requireNotNull(sourceManager).get(mangaReference.mangaSourceId)
                     ?: error("Source ${mangaReference.mangaSourceId} was null")
                 val manga = mergedManga?.get(chapter.chapter.manga_id) ?: error("Manga for merged chapter was null")
                 val isMergedMangaDownloaded = downloadManager.isChapterDownloaded(
