@@ -102,9 +102,16 @@ jobs:
         # forks that build from their own branch keep the intended behaviour.
         if: github.ref_name == github.event.repository.default_branch
         run: |
-          git tag "${{ steps.prepare_env.outputs.TAG_NAME }}"
-          git push origin "${{ steps.prepare_env.outputs.TAG_NAME }}"
-          echo "New tag created: ${{ steps.prepare_env.outputs.TAG_NAME }}"
+          tag="${{ steps.prepare_env.outputs.TAG_NAME }}"
+          # The tag is derived from the commit count, so re-running the workflow without new
+          # commits would otherwise abort with "tag already exists".
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "Tag $tag already exists; reusing it."
+          else
+            git tag "$tag"
+            git push origin "$tag"
+            echo "New tag created: $tag"
+          fi
 
       - name: Commit logs
         id: commit_logs
