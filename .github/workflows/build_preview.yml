@@ -133,7 +133,10 @@ jobs:
           java-version-file: .github/.java-version
           distribution: temurin
 
+      # Forks build without a Firebase project, so these files are written only when the secrets
+      # exist. Telemetry is off in that case, which is what makes google-services.json optional.
       - name: Write google-services.json
+        if: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
         uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
         with:
           path: app/google-services.json
@@ -141,6 +144,7 @@ jobs:
           write-mode: overwrite
 
       - name: Write client_secrets.json
+        if: ${{ secrets.GOOGLE_CLIENT_SECRETS_JSON != '' }}
         uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
         with:
           path: app/src/main/assets/client_secrets.json
@@ -154,7 +158,9 @@ jobs:
         run: ./gradlew spotlessCheck
 
       - name: Build app
-        run: ./gradlew assemblePreview -Pinclude-telemetry -Penable-updater
+        # -Pinclude-telemetry would apply the google-services and Crashlytics plugins, which require
+        # a Firebase project this fork does not have. The in-app updater stays enabled.
+        run: ./gradlew assemblePreview -Penable-updater
 
       - name: Run unit tests
         run: ./gradlew testReleaseUnitTest
