@@ -121,6 +121,10 @@ jobs:
     needs: prepare-build
     # Forks publish previews from their own default branch, not upstream's master.
     if: github.ref_name == github.event.repository.default_branch
+    env:
+      # `secrets` cannot be referenced from a step-level `if`, so presence is resolved here.
+      HAS_GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
+      HAS_GOOGLE_CLIENT_SECRETS: ${{ secrets.GOOGLE_CLIENT_SECRETS_JSON != '' }}
     steps:
       - name: Clone Repository (${{ needs.prepare-build.outputs.VERSION_TAG }} - ${{ needs.prepare-build.outputs.TAG_NAME }})
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -136,7 +140,7 @@ jobs:
       # Forks build without a Firebase project, so these files are written only when the secrets
       # exist. Telemetry is off in that case, which is what makes google-services.json optional.
       - name: Write google-services.json
-        if: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
+        if: env.HAS_GOOGLE_SERVICES == 'true'
         uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
         with:
           path: app/google-services.json
@@ -144,7 +148,7 @@ jobs:
           write-mode: overwrite
 
       - name: Write client_secrets.json
-        if: ${{ secrets.GOOGLE_CLIENT_SECRETS_JSON != '' }}
+        if: env.HAS_GOOGLE_CLIENT_SECRETS == 'true'
         uses: DamianReeves/write-file-action@6929a9a6d1807689191dcc8bbe62b54d70a32b42 # v1.3
         with:
           path: app/src/main/assets/client_secrets.json
