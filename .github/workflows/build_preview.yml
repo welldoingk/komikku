@@ -97,7 +97,10 @@ jobs:
           echo "BUILD_TYPE_NAME=$build_type_name" >> $GITHUB_OUTPUT
 
       - name: Create Tag '${{ steps.prepare_env.outputs.TAG_NAME }}'
-        if: ${{ github.ref }} == "refs/heads/master"
+        # Upstream wrote this as `${{ github.ref }} == "..."`, which interpolates first and leaves a
+        # non-empty string, so the step always ran. Compare against the repository default branch so
+        # forks that build from their own branch keep the intended behaviour.
+        if: github.ref_name == github.event.repository.default_branch
         run: |
           git tag "${{ steps.prepare_env.outputs.TAG_NAME }}"
           git push origin "${{ steps.prepare_env.outputs.TAG_NAME }}"
@@ -116,7 +119,8 @@ jobs:
   build-app:
     runs-on: 'ubuntu-24.04'
     needs: prepare-build
-    if: github.ref == 'refs/heads/master'
+    # Forks publish previews from their own default branch, not upstream's master.
+    if: github.ref_name == github.event.repository.default_branch
     steps:
       - name: Clone Repository (${{ needs.prepare-build.outputs.VERSION_TAG }} - ${{ needs.prepare-build.outputs.TAG_NAME }})
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
