@@ -26,6 +26,17 @@
 -keep,allowoptimization class eu.kanade.tachiyomi.network.RequestsKt { public protected *; }
 -keep,allowoptimization class eu.kanade.tachiyomi.AppInfo { public protected *; }
 
+# KMK -->
+# Text-book contract implemented by extensions. Extensions compile against the original
+# signatures, so R8 must not reshape these members -- allowoptimization let it drop the
+# unused parameters of TextBookContent.getTextBookPublication, and the extension then failed
+# at runtime with AbstractMethodError. Keep them verbatim, without allowoptimization.
+-keep class eu.kanade.tachiyomi.source.TextBookSource { *; }
+-keep class eu.kanade.tachiyomi.source.TextBookContent { *; }
+-keep class eu.kanade.tachiyomi.source.model.TextBook* { *; }
+-keep class eu.kanade.tachiyomi.source.model.Book* { *; }
+# KMK <--
+
 # Debug functions
 -keep,allowoptimization class exh.debug.DebugFunctions { public *; }
 
