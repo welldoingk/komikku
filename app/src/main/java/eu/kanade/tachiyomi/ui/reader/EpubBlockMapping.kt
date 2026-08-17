@@ -41,9 +41,14 @@ internal fun epubBlockIdAtProgression(
     return eligible.last().id
 }
 
-internal fun epubScrollProgression(scrollY: Int, verticalScrollRange: Int): Double {
-    if (verticalScrollRange <= 0) return 0.0
-    return (scrollY.toDouble() / verticalScrollRange).coerceIn(0.0, 1.0)
+internal fun epubScrollProgression(
+    scrollY: Int,
+    verticalScrollRange: Int,
+    viewportHeight: Int,
+): Double {
+    val scrollableRange = verticalScrollRange - viewportHeight
+    if (scrollableRange <= 0) return 0.0
+    return (scrollY.toDouble() / scrollableRange).coerceIn(0.0, 1.0)
 }
 
 internal fun String.isSafeEpubAnchorId(): Boolean = matches(EPUB_ANCHOR_ID)

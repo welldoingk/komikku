@@ -23,7 +23,11 @@ class EpubTextViewerSourceTest {
     fun `viewer observes scroll and debounces block locator persistence`() {
         val source = projectRoot().resolve(VIEWER_SOURCE).toFile().readText()
 
-        assertTrue(source.contains("setOnScrollChangeListener"))
+        assertTrue(source.contains("LocatorWebView(activity, ::scheduleScrollPersistence)"))
+        assertTrue(source.contains("override fun onScrollChanged("))
+        assertTrue(source.contains("super.onScrollChanged(l, t, oldl, oldt)"))
+        assertTrue(source.contains("onScroll()"))
+        assertFalse(source.contains("setOnScrollChangeListener"))
         assertTrue(source.contains("computeVerticalScrollRange()"))
         assertTrue(source.contains("postDelayed"))
         assertTrue(source.contains("SCROLL_PERSIST_DEBOUNCE_MILLIS"))

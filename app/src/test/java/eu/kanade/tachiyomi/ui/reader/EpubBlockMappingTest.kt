@@ -23,10 +23,42 @@ class EpubBlockMappingTest {
 
     @Test
     fun `scroll progression is finite and clamped without a WebView`() {
-        assertEquals(0.25, epubScrollProgression(scrollY = 250, verticalScrollRange = 1_000))
-        assertEquals(0.0, epubScrollProgression(scrollY = -10, verticalScrollRange = 1_000))
-        assertEquals(1.0, epubScrollProgression(scrollY = 2_000, verticalScrollRange = 1_000))
-        assertEquals(0.0, epubScrollProgression(scrollY = 10, verticalScrollRange = 0))
+        assertEquals(
+            0.25,
+            epubScrollProgression(scrollY = 250, verticalScrollRange = 1_250, viewportHeight = 250),
+        )
+        assertEquals(
+            0.0,
+            epubScrollProgression(scrollY = -10, verticalScrollRange = 1_250, viewportHeight = 250),
+        )
+        assertEquals(
+            1.0,
+            epubScrollProgression(scrollY = 2_000, verticalScrollRange = 1_250, viewportHeight = 250),
+        )
+    }
+
+    @Test
+    fun `scroll progression reaches one at the bottom of the scrollable distance`() {
+        assertEquals(
+            1.0,
+            epubScrollProgression(scrollY = 800, verticalScrollRange = 1_000, viewportHeight = 200),
+        )
+    }
+
+    @Test
+    fun `scroll progression is zero when the document does not scroll`() {
+        assertEquals(
+            0.0,
+            epubScrollProgression(scrollY = 10, verticalScrollRange = 1_000, viewportHeight = 1_000),
+        )
+    }
+
+    @Test
+    fun `scroll progression is zero when the viewport is taller than the content`() {
+        assertEquals(
+            0.0,
+            epubScrollProgression(scrollY = 10, verticalScrollRange = 800, viewportHeight = 1_000),
+        )
     }
 
     @Test

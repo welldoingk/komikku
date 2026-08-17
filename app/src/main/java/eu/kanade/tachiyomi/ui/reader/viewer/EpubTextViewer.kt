@@ -163,11 +163,10 @@ class EpubTextViewer(
 
     @SuppressLint("ClickableViewAccessibility")
     private fun createWebView() {
-        webView = LocatorWebView(activity).apply {
+        webView = LocatorWebView(activity, ::scheduleScrollPersistence).apply {
             EpubWebViewPolicy.configure(settings)
             webViewClient = ReaderWebViewClient()
             setDownloadListener { _, _, _, _, _ -> }
-            setOnScrollChangeListener { _, _, _, _, _ -> scheduleScrollPersistence() }
             setOnTouchListener { _, event ->
                 handleTouchEvent(event)
                 false
@@ -295,9 +294,17 @@ class EpubTextViewer(
         val baseUrl: String,
     )
 
-    private class LocatorWebView(context: Context) : WebView(context) {
+    private class LocatorWebView(
+        context: Context,
+        private val onScroll: () -> Unit,
+    ) : WebView(context) {
+        override fun onScrollChanged(l: Int, t: Int, oldl: Int, oldt: Int) {
+            super.onScrollChanged(l, t, oldl, oldt)
+            onScroll()
+        }
+
         fun currentProgression(): Double =
-            epubScrollProgression(scrollY, computeVerticalScrollRange())
+            epubScrollProgression(scrollY, computeVerticalScrollRange(), height)
     }
 
     private companion object {
