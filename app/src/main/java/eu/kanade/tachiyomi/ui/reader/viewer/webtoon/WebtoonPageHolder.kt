@@ -107,6 +107,13 @@ class WebtoonPageHolder(
             if (!viewer.isContinuous) {
                 bottomMargin = 15.dpToPx
             }
+            // KMK -->
+            else {
+                // Overlap adjacent pages by one pixel so sub-pixel positions while scrolling
+                // never expose the reader background as a line between pages.
+                bottomMargin = -1
+            }
+            // KMK <--
 
             val margin = Resources.getSystem().displayMetrics.widthPixels * (viewer.config.sidePadding / 100f)
             marginEnd = margin.toInt()
